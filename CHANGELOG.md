@@ -9,6 +9,7 @@
   templates ordered after Docker and Tailscale.
 
 ### Fixed
+- LeHarness dashboard docs/tasks no longer mention an admin login token; Tailscale is the gate.
 - LeHarness now tracks its real `master` default branch instead of nonexistent
   `main`.
 - Provisioning rechecks and fails on unresolved LeHarness prerequisites rather

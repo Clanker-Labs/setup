@@ -93,8 +93,7 @@ To scale a Spark later, rerun the same command on the original node with
 fast local fabric for Ray; the gateway can remain bound to Tailscale.
 
 The operations dashboard (`leharness dashboard`) binds the Tailscale IP on
-port 8701. The login token is created at first start in
-`~/apps/LeHarness/.state/admin.token`.
+port 8701. There is no app login — Tailscale (or loopback) is the access gate.
 
 ## Why Node comes from NodeSource
 
