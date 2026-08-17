@@ -219,7 +219,7 @@ leharness:
   install_gpu_runtime: true
   # Install a templated systemd unit for the target user/path.
   systemd: true
-  # Also install/start the operations dashboard (Tailscale bind, token auth).
+  # Also install/start the operations dashboard (Tailscale/loopback bind, no app login).
   dashboard: true
   # Start serving during provisioning (downloads model weights immediately).
   start: false

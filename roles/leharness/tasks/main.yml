@@ -161,5 +161,5 @@
       - "LeHarness is at {{ leharness_repo_dir }}."
       - "Configure: {{ leharness_repo_dir }}/bin/leharness configure"
       - "Serve: make -C {{ leharness_repo_dir }} up    Health: make -C {{ leharness_repo_dir }} doctor"
-      - "Dashboard: {{ leharness_repo_dir }}/bin/leharness dashboard  (token in {{ leharness_repo_dir }}/.state/admin.token)"
+      - "Dashboard: {{ leharness_repo_dir }}/bin/leharness dashboard  (Tailscale bind, no app login)"
       - "Clients use the gateway bind from leharness.local.yaml (model 'chat')."
