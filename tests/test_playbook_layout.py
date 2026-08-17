@@ -16,11 +16,19 @@ def load_yaml(relative_path: str):
     return yaml.safe_load((REPO_ROOT / relative_path).read_text(encoding="utf-8"))
 
 
-def test_dev_playbook_runs_the_chezmoi_role() -> None:
+def test_dev_playbook_runs_all_machine_and_handoff_roles() -> None:
     play = load_yaml("playbooks/dev.yml")[0]
     roles = [entry["role"] for entry in play["roles"]]
 
-    assert roles == ["common", "dev_shell", "dev", "chezmoi", "dotfiles", "apps"]
+    assert roles == [
+        "common",
+        "dev_shell",
+        "dev",
+        "chezmoi",
+        "dotfiles",
+        "apps",
+        "leharness",
+    ]
 
 
 def test_dev_playbook_resolves_a_target_user_before_roles_run() -> None:
@@ -35,6 +43,25 @@ def test_every_role_directory_has_tasks() -> None:
         if not role_dir.is_dir():
             continue
         assert (role_dir / "tasks" / "main.yml").is_file(), f"{role_dir.name} has no tasks"
+
+
+def test_leharness_role_has_user_path_agnostic_service_template() -> None:
+    template = REPO_ROOT / "roles/leharness/templates/leharness.service.j2"
+    body = template.read_text(encoding="utf-8")
+
+    assert "User={{ setup_target_user }}" in body
+    assert "WorkingDirectory={{ leharness_repo_dir }}" in body
+    assert "/home/erwin" not in body
+    assert "tailscaled.service" in body
+
+
+def test_leharness_dashboard_unit_is_templated_for_the_target_user() -> None:
+    template = REPO_ROOT / "roles/leharness/templates/leharness-dashboard.service.j2"
+    body = template.read_text(encoding="utf-8")
+
+    assert "User={{ setup_target_user }}" in body
+    assert "leharness dashboard" in body
+    assert "/home/erwin" not in body
 
 
 def test_no_config_key_is_read_through_a_dict_method_name() -> None:

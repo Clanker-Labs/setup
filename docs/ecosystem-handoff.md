@@ -54,26 +54,47 @@ edit.
 
 ## Local models: the LeHarness role
 
-[`guilyx/LeHarness`](https://github.com/guilyx/LeHarness) is the third piece:
-it serves local LLMs on whatever hardware the machine has (vLLM with tensor
-parallelism on GPU rigs, Ollama with GGUF quantization on Jetson/CPU) behind
-one OpenAI-compatible URL. The split of responsibilities:
+[`Clanker-Labs/LeHarness`](https://github.com/Clanker-Labs/LeHarness) is the
+third piece: it serves local LLMs on whatever hardware the machine has (vLLM
+on DGX Spark/GPU rigs, Ray across multiple nodes, or Ollama on Jetson/CPU)
+behind one OpenAI-compatible URL. The split of responsibilities:
 
 | Repo | LeHarness-related job |
 |---|---|
-| `setup` (this one) | clone LeHarness, make docker GPU-capable (`nvidia-container-toolkit`), report the detected tier |
-| `LeHarness` | detect hardware, pick engine + parallelism, run the containers, expose the gateway |
-| `chezmoi` | clone/configure/start/monitor it alongside the other apps (`make up ONLY=leharness`, `make doctor`, dashboard card) |
+| `setup` (this one) | clone LeHarness, GPU runtime, systemd units including the dashboard |
+| `LeHarness` | detect hardware, pick engine, serve models, operations dashboard |
+| `chezmoi` | optional home-ecosystem port remap / extra cards |
 
 ```yaml
 leharness:
   enabled: true
   install_gpu_runtime: true   # no-op without an NVIDIA GPU
-  start: false                # keep off during provisioning: pulls model weights
+  systemd: true
+  dashboard: true
+  start: true                 # pulls model weights and enables boot service
+  configure:
+    enabled: true
+    engine: vllm
+    topology: single
+    preset: deepseek-r1-qwen3-8b
+    bind: tailscale           # gateway only on the tailnet
 ```
 
 Like the `apps` role, it reimplements nothing — hardware detection and engine
-selection live in the LeHarness repo, and this role calls its scripts.
+selection live in the LeHarness repo, and this role calls its scripts. Leave
+`configure.enabled: false` to run the interactive wizard instead:
+
+```bash
+~/apps/LeHarness/bin/leharness configure
+```
+
+To scale a Spark later, rerun the same command on the original node with
+`--topology head` and on each added node with `--topology worker`. Use the
+fast local fabric for Ray; the gateway can remain bound to Tailscale.
+
+The operations dashboard (`leharness dashboard`) binds the Tailscale IP on
+port 8701. The login token is created at first start in
+`~/apps/LeHarness/.state/admin.token`.
 
 ## Why Node comes from NodeSource
 
