@@ -1,0 +1,16 @@
+[Unit]
+Description=LeHarness operations dashboard
+After=network-online.target tailscaled.service leharness.service
+Wants=network-online.target tailscaled.service
+
+[Service]
+Type=simple
+User={{ setup_target_user }}
+WorkingDirectory={{ leharness_repo_dir }}
+Environment=PYTHONUNBUFFERED=1
+ExecStart={{ leharness_repo_dir }}/bin/leharness dashboard
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

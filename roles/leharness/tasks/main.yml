@@ -1,8 +1,9 @@
 ---
 # Optional: put LeHarness (the local LLM serving harness for LeClanker,
-# https://github.com/guilyx/LeHarness) on this machine. Like the apps role,
-# this deliberately reimplements nothing — it clones the repo and calls its
-# own scripts, so hardware detection and engine selection stay defined there.
+# https://github.com/Clanker-Labs/LeHarness) on this machine. Like the apps
+# role, this deliberately reimplements nothing — it clones the repo and calls
+# its own scripts (detect / configure / up), so hardware detection and engine
+# selection stay defined there.
 - name: Skip leharness role when disabled
   ansible.builtin.meta: end_role
   when: leharness is not defined or not leharness.enabled | bool
@@ -17,7 +18,7 @@
   ansible.builtin.git:
     repo: "{{ leharness.repo_url }}"
     dest: "{{ leharness_repo_dir }}"
-    version: "{{ leharness.version | default('main') }}"
+    version: "{{ leharness.version | default('master') }}"
     # Bracket syntax: leharness.update would resolve to dict.update, the method.
     update: "{{ leharness['update'] | default(true) | bool }}"
 
@@ -45,6 +46,25 @@
     - leharness.install_gpu_runtime | default(true) | bool
     - leharness_install.rc != 0
 
+- name: Re-check LeHarness prerequisites after fix
+  become: true
+  become_user: "{{ setup_target_user }}"
+  ansible.builtin.command:
+    cmd: bash scripts/install.sh
+    chdir: "{{ leharness_repo_dir }}"
+  register: leharness_install_final
+  changed_when: false
+
+- name: Fail when LeHarness prerequisites are still unmet
+  ansible.builtin.fail:
+    msg: >-
+      LeHarness prerequisites failed after remediation:
+      {{ leharness_install_final.stderr | default(leharness_install.stderr) | default('(no stderr)') }}
+  when:
+    - leharness_install_final is defined
+    - leharness_install_final.rc is defined
+    - leharness_install_final.rc != 0
+
 - name: Detect the hardware tier
   become: true
   become_user: "{{ setup_target_user }}"
@@ -53,11 +73,75 @@
     chdir: "{{ leharness_repo_dir }}"
   register: leharness_detect
   changed_when: false
-  failed_when: false
 
 - name: Report the detected profile
   ansible.builtin.debug:
     msg: "{{ leharness_detect.stdout | default('detection failed') }}"
+
+# Optional non-interactive configure — passes through to `leharness configure`
+# without reimplementing the wizard. Keys map 1:1 to CLI flags.
+- name: Apply non-interactive LeHarness configure
+  become: true
+  become_user: "{{ setup_target_user }}"
+  ansible.builtin.command:
+    cmd: >-
+      python3 scripts/configure.py --non-interactive
+      --engine {{ leharness.configure.engine }}
+      --topology {{ leharness.configure.topology | default('single') }}
+      {% if leharness.configure.preset is defined and leharness.configure.preset %}
+      --preset {{ leharness.configure.preset }}
+      {% endif %}
+      --bind {{ leharness.configure.bind | default('127.0.0.1') }}
+      {% if leharness.configure.cluster_addr is defined and leharness.configure.cluster_addr %}
+      --cluster-addr {{ leharness.configure.cluster_addr }}
+      {% endif %}
+      {% if leharness.configure.head_address is defined and leharness.configure.head_address %}
+      --head-address {{ leharness.configure.head_address }}
+      {% endif %}
+      {% if leharness.configure.cluster_nodes is defined %}
+      --cluster-nodes {{ leharness.configure.cluster_nodes }}
+      {% endif %}
+    chdir: "{{ leharness_repo_dir }}"
+  register: leharness_configure
+  changed_when: leharness_configure.rc == 0
+  when:
+    - leharness.configure is defined
+    - leharness.configure.enabled | default(false) | bool
+
+- name: Install templated leharness systemd unit
+  ansible.builtin.template:
+    src: leharness.service.j2
+    dest: /etc/systemd/system/leharness.service
+    mode: "0644"
+  notify: Reload systemd
+  when: leharness.systemd | default(true) | bool
+
+- name: Install templated leharness dashboard systemd unit
+  ansible.builtin.template:
+    src: leharness-dashboard.service.j2
+    dest: /etc/systemd/system/leharness-dashboard.service
+    mode: "0644"
+  notify: Reload systemd
+  when: leharness.systemd | default(true) | bool
+
+- name: Enable leharness systemd unit
+  ansible.builtin.systemd:
+    name: leharness
+    enabled: true
+    daemon_reload: true
+  when:
+    - leharness.systemd | default(true) | bool
+    - leharness.start | default(false) | bool
+
+- name: Enable leharness dashboard systemd unit
+  ansible.builtin.systemd:
+    name: leharness-dashboard
+    enabled: true
+    state: started
+    daemon_reload: true
+  when:
+    - leharness.systemd | default(true) | bool
+    - leharness.dashboard | default(true) | bool
 
 # Serving is opt-in: it pulls multi-GB model weights and pins GPU memory,
 # which a provisioning run should not silently commit the machine to.
@@ -75,6 +159,7 @@
   ansible.builtin.debug:
     msg:
       - "LeHarness is at {{ leharness_repo_dir }}."
-      - "Tune models/profile in {{ leharness_repo_dir }}/leharness.yaml (optional — full auto works)."
+      - "Configure: {{ leharness_repo_dir }}/bin/leharness configure"
       - "Serve: make -C {{ leharness_repo_dir }} up    Health: make -C {{ leharness_repo_dir }} doctor"
-      - "Clients use the gateway: http://127.0.0.1:8000/v1 (model 'chat')."
+      - "Dashboard: {{ leharness_repo_dir }}/bin/leharness dashboard  (token in {{ leharness_repo_dir }}/.state/admin.token)"
+      - "Clients use the gateway bind from leharness.local.yaml (model 'chat')."

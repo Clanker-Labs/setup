@@ -204,20 +204,36 @@ apps:
   run_bootstrap: false
   start_stacks: false
 
-# Optional local LLM serving harness (vLLM on GPU rigs, Ollama on Jetson/CPU;
+# Optional local LLM serving harness (vLLM on GPU/Spark, Ollama on Jetson/CPU;
 # one OpenAI-compatible gateway URL either way). Off by default: serving pulls
 # multi-GB model weights. The role clones the repo and calls its own scripts.
 leharness:
   enabled: false
-  repo_url: "https://github.com/guilyx/LeHarness.git"
+  # Default branch of Clanker-Labs/LeHarness is master (not main).
+  repo_url: "https://github.com/Clanker-Labs/LeHarness.git"
   destination: "~/apps/LeHarness"
-  version: "main"
+  version: "master"
   update: true
   # Wire the NVIDIA container toolkit into docker when a GPU is present but
   # the runtime is missing (no-op on GPU-less machines).
   install_gpu_runtime: true
+  # Install a templated systemd unit for the target user/path.
+  systemd: true
+  # Also install/start the operations dashboard (Tailscale bind, token auth).
+  dashboard: true
   # Start serving during provisioning (downloads model weights immediately).
   start: false
+  # Optional non-interactive pass-through to `leharness configure`.
+  # Leave enabled: false and run the wizard by hand after provision.
+  configure:
+    enabled: false
+    engine: vllm
+    topology: single
+    preset: deepseek-r1-qwen3-8b
+    bind: tailscale
+    cluster_nodes: 1
+    cluster_addr: ""
+    head_address: ""
 
 vps:
   enabled: true

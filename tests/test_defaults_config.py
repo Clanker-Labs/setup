@@ -100,6 +100,20 @@ def test_apps_handoff_is_opt_in() -> None:
     assert apps["repo_url"].endswith("chezmoi.git")
 
 
+def test_leharness_handoff_is_safe_and_tracks_real_default_branch() -> None:
+    leharness = load_defaults()["leharness"]
+
+    assert leharness["enabled"] is False
+    assert leharness["start"] is False
+    assert leharness["version"] == "master"
+    assert leharness["repo_url"] == "https://github.com/Clanker-Labs/LeHarness.git"
+    assert leharness["systemd"] is True
+    assert leharness["dashboard"] is True
+    assert leharness["configure"]["enabled"] is False
+    assert leharness["configure"]["bind"] == "tailscale"
+    assert leharness["configure"]["preset"] == "deepseek-r1-qwen3-8b"
+
+
 def test_vps_defaults_include_ssh_authorized_keys_list() -> None:
     cfg = load_defaults()
     assert "ssh_authorized_keys" in cfg["vps"]

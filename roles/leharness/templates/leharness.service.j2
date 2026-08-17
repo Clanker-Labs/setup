@@ -1,0 +1,17 @@
+[Unit]
+Description=LeHarness — local LLM serving harness
+After=docker.service network-online.target tailscaled.service
+Requires=docker.service
+Wants=network-online.target tailscaled.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User={{ setup_target_user }}
+WorkingDirectory={{ leharness_repo_dir }}
+ExecStart={{ leharness_repo_dir }}/bin/leharness up
+ExecStop={{ leharness_repo_dir }}/bin/leharness down
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target
