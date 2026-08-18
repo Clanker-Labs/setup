@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Added
+- `clanker-fleet` Claude skill under `.claude/skills/` — how machines reach shared services, wiring apps to a local or remote LeHarness, and the Tailscale-only networking rules.
+- `leharness.configure.presets` passes a resident model set through to `leharness configure --presets` (Ollama keeps several models loaded, one alias each).
 - Optional non-interactive LeHarness configuration pass-through for engine,
   topology, model preset, cluster addresses, and Tailscale gateway binding.
 - Target-user/path-aware `leharness.service` and `leharness-dashboard.service`

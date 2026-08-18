@@ -88,7 +88,9 @@
       python3 scripts/configure.py --non-interactive
       --engine {{ leharness.configure.engine }}
       --topology {{ leharness.configure.topology | default('single') }}
-      {% if leharness.configure.preset is defined and leharness.configure.preset %}
+      {% if leharness.configure.presets is defined and leharness.configure.presets %}
+      --presets {{ leharness.configure.presets | join(',') }}
+      {% elif leharness.configure.preset is defined and leharness.configure.preset %}
       --preset {{ leharness.configure.preset }}
       {% endif %}
       --bind {{ leharness.configure.bind | default('127.0.0.1') }}

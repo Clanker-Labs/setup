@@ -230,6 +230,10 @@ leharness:
     engine: vllm
     topology: single
     preset: deepseek-r1-qwen3-8b
+    # Ollama only: keep several models resident, one served alias each. Takes
+    # precedence over `preset` when set. Sizes are checked before pulling.
+    #   presets: [qwen3-next-80b, qwen3-coder-30b, qwen3-vl-8b, qwen3-8b-fast]
+    presets: []
     bind: tailscale
     cluster_nodes: 1
     cluster_addr: ""
